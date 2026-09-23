@@ -1,0 +1,53 @@
+<resources>
+    <string name="app_name">画面手書きオーバーレイ</string>
+    <string name="action_settings">設定</string>
+
+    <string name="first_fragment_label">画面手書き</string>
+    <string name="second_fragment_label">詳細</string>
+    <string name="previous">戻る</string>
+    <string name="lorem_ipsum">画面手書きオーバーレイ</string>
+
+    <string name="tile_label">画面手書き</string>
+    <string name="header_app_title">🖋️ 画面手書きオーバーレイ</string>
+    <string name="status_checking">権限を確認中...</string>
+    <string name="status_permission_granted">✅ 「他のアプリの上に重ねて表示」の許可済み</string>
+    <string name="status_permission_denied">⚠️ 「他のアプリの上に重ねて表示」の許可が必要です</string>
+
+    <string name="notification_channel_name">手書きオーバーレイサービス</string>
+    <string name="notification_title">画面手書きオーバーレイ実行中</string>
+    <string name="notification_text">タップしてオーバーレイを操作または終了します</string>
+
+    <string name="desc_drag_handle">ドラッグハンドル</string>
+    <string name="desc_undo">元に戻す</string>
+    <string name="desc_clear">全消去</string>
+    <string name="desc_color">ペン色切り替え</string>
+    <string name="desc_close">オーバーレイを閉じる</string>
+
+    <string name="mode_draw">手書き</string>
+    <string name="mode_pass_through">画面操作</string>
+
+    <string name="stroke_width_thin">細</string>
+    <string name="stroke_width_medium">中</string>
+    <string name="stroke_width_thick">太</string>
+
+    <string name="permission_overlay_title">「他のアプリの上に重ねて表示」の許可が必要です</string>
+    <string name="permission_overlay_desc">画面上に手書きで書き込むには、本アプリに重ねて表示の権限を許可してください。</string>
+    <string name="btn_grant_permission">1. 「重ねて表示」設定を開く</string>
+    <string name="btn_open_app_info">2. アプリ情報画面を開く（アクセス拒否時）</string>
+
+    <string name="restricted_guide_title">💡 「アクセスが拒否されました」「制限付きの設定」と表示される場合</string>
+    <string name="restricted_guide_step1">Android 13以降ではセキュリティ保護のため、開発中のアプリの権限設定が制限される場合があります。</string>
+    <string name="restricted_guide_step2">解除手順：\n1. 上の「アプリ情報画面を開く」ボタンをタップします。\n2. アプリ情報画面の右上にある「⋮」（3つの点）メニューをタップします。\n3. 「制限付きの設定を許可」をタップし、端末のロック（PIN/指紋など）を解除します。\n4. その後、再度「重ねて表示」設定から権限をONにできます。</string>
+
+    <string name="btn_start_overlay">手書きを開始（オーバーレイ表示）</string>
+    <string name="btn_stop_overlay">オーバーレイを終了</string>
+
+    <string name="qs_guide_title">📱 クイック設定タイルの追加方法</string>
+    <string name="qs_guide_step1">1. 画面上部から下に2回スワイプして、クイック設定パネルを開きます。</string>
+    <string name="qs_guide_step2">2. パネル下の編集アイコン（ペンまたは歯車マーク）をタップします。</string>
+    <string name="qs_guide_step3">3. 非表示タイルの一覧から「画面手書き」を見つけます。</string>
+    <string name="qs_guide_step4">4. 「画面手書き」アイコンを上のアクティブエリアへドラッグ＆ドロップします。</string>
+    <string name="qs_guide_step5">5. これでどの画面を開いていても、クイック設定からワンタップで手書きが開始できます！</string>
+
+    <string name="test_canvas_title">✍️ アプリ内でお試し描画</string>
+</resources>

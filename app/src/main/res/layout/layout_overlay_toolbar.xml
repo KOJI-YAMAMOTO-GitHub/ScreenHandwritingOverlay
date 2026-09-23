@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_toolbar"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="#E6212121"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="10dp"
+    app:cardUseCompatPadding="true">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp">
+
+        <!-- Drag Handle -->
+        <ImageView
+            android:id="@+id/btn_drag_handle"
+            android:layout_width="32dp"
+            android:layout_height="36dp"
+            android:contentDescription="@string/desc_drag_handle"
+            android:padding="6dp"
+            android:src="@drawable/ic_drag_handle"
+            app:tint="#B0FFFFFF" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="24dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#33FFFFFF" />
+
+        <!-- Draw Mode / Touch Pass-Through Toggle Button -->
+        <LinearLayout
+            android:id="@+id/btn_mode_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_mode_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp">
+
+            <ImageView
+                android:id="@+id/iv_mode_icon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:contentDescription="@string/mode_draw"
+                android:src="@drawable/ic_pen"
+                app:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tv_mode_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/mode_draw"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Undo -->
+        <ImageButton
+            android:id="@+id/btn_undo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_undo"
+            android:padding="8dp"
+            android:src="@drawable/ic_undo"
+            app:tint="#FFFFFF" />
+
+        <!-- Clear -->
+        <ImageButton
+            android:id="@+id/btn_clear"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_clear"
+            android:padding="8dp"
+            android:src="@drawable/ic_clear"
+            app:tint="#FFFFFF" />
+
+        <!-- Line Width Option Toggle Button -->
+        <TextView
+            android:id="@+id/btn_width_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingHorizontal="10dp"
+            android:text="@string/stroke_width_thin"
+            android:textColor="#FFCDD2"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Color Selector -->
+        <ImageButton
+            android:id="@+id/btn_color_toggle"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginHorizontal="2dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_color"
+            android:padding="6dp"
+            android:src="@drawable/ic_palette"
+            app:tint="#FF5252" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="24dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#33FFFFFF" />
+
+        <!-- Close -->
+        <ImageButton
+            android:id="@+id/btn_close"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_close"
+            android:padding="8dp"
+            android:src="@drawable/ic_close"
+            app:tint="#FFFFFF" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
