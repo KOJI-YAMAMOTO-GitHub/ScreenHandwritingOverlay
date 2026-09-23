@@ -1,3 +1,5 @@
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -31,6 +33,13 @@ android {
     }
     buildFeatures {
         viewBinding = true
+    }
+}
+
+val androidComponents = extensions.getByType(ApplicationAndroidComponentsExtension::class.java)
+androidComponents.onVariants { variant ->
+    variant.outputs.forEach { output ->
+        output.outputFileName.set("ScreenHandwritingOverlay.apk")
     }
 }
 
