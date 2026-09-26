@@ -113,17 +113,6 @@
             android:src="@drawable/ic_palette"
             app:tint="#FF5252" />
 
-        <!-- Screenshot -->
-        <ImageButton
-            android:id="@+id/btn_screenshot"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/desc_screenshot"
-            android:padding="8dp"
-            android:src="@drawable/ic_camera"
-            app:tint="#FFFFFF" />
-
         <View
             android:layout_width="1dp"
             android:layout_height="24dp"

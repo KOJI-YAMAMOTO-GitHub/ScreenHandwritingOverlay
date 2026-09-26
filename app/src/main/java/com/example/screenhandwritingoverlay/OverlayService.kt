@@ -5,22 +5,16 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
-import android.media.ImageReader
-import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.provider.MediaStore
 import android.provider.Settings
 import android.view.ContextThemeWrapper
 import android.view.Display
@@ -32,7 +26,6 @@ import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
@@ -42,10 +35,6 @@ class OverlayService : Service() {
         const val ACTION_START = "com.example.screenhandwritingoverlay.ACTION_START"
         const val ACTION_STOP = "com.example.screenhandwritingoverlay.ACTION_STOP"
         const val ACTION_TOGGLE = "com.example.screenhandwritingoverlay.ACTION_TOGGLE"
-
-        const val ACTION_SCREENSHOT_RESULT = "com.example.screenhandwritingoverlay.ACTION_SCREENSHOT_RESULT"
-        const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
-        const val EXTRA_RESULT_DATA = "EXTRA_RESULT_DATA"
 
         const val CHANNEL_ID = "handwriting_overlay_channel"
         const val NOTIFICATION_ID = 1001
@@ -95,10 +84,6 @@ class OverlayService : Service() {
 
     private var currentStrokeOption = DrawingView.StrokeWidthOption.THIN
 
-    private var mediaProjectionCode: Int? = null
-    private var mediaProjectionData: Intent? = null
-    private var mediaProjection: MediaProjection? = null
-
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
             val display = displayManager.getDisplay(displayId) ?: return
@@ -135,17 +120,6 @@ class OverlayService : Service() {
                     return START_NOT_STICKY
                 }
             }
-            ACTION_SCREENSHOT_RESULT -> {
-                val resultCode = intent.getIntParameterSafe(EXTRA_RESULT_CODE, 0)
-                val resultData = intent.getParcelableExtraSafe<Intent>(EXTRA_RESULT_DATA)
-                if (resultCode != 0 && resultData != null) {
-                    mediaProjectionCode = resultCode
-                    mediaProjectionData = resultData
-                    startForegroundNotification(includeMediaProjection = true)
-                    captureScreen()
-                }
-                return START_STICKY
-            }
         }
 
         if (!Settings.canDrawOverlays(this)) {
@@ -163,7 +137,7 @@ class OverlayService : Service() {
         return START_STICKY
     }
 
-    private fun startForegroundNotification(includeMediaProjection: Boolean = false) {
+    private fun startForegroundNotification() {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -199,11 +173,7 @@ class OverlayService : Service() {
         startForeground(
             NOTIFICATION_ID,
             notification,
-            if (includeMediaProjection) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-            } else {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            }
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
     }
 
@@ -326,7 +296,6 @@ class OverlayService : Service() {
         val btnClear = toolbar.findViewById<ImageButton>(R.id.btn_clear)
         val btnWidthToggle = toolbar.findViewById<TextView>(R.id.btn_width_toggle)
         val btnColorToggle = toolbar.findViewById<ImageButton>(R.id.btn_color_toggle)
-        val btnScreenshot = toolbar.findViewById<ImageButton>(R.id.btn_screenshot)
         val btnClose = toolbar.findViewById<ImageButton>(R.id.btn_close)
 
         // Draggable Floating Toolbar
@@ -413,18 +382,6 @@ class OverlayService : Service() {
             }
         }
 
-        // Screenshot
-        btnScreenshot.setOnClickListener {
-            if (mediaProjectionCode != null && mediaProjectionData != null) {
-                captureScreen()
-            } else {
-                val intent = Intent(this, ScreenCaptureActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
-            }
-        }
-
         // Close Service
         btnClose.setOnClickListener {
             stopOverlayService()
@@ -462,106 +419,6 @@ class OverlayService : Service() {
         }
     }
 
-    private fun captureScreen() {
-        val code = mediaProjectionCode ?: return
-        val data = mediaProjectionData ?: return
-
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        if (mediaProjection == null) {
-            mediaProjection = projectionManager.getMediaProjection(code, data)
-        }
-        val proj = mediaProjection ?: return
-
-        // Hide all toolbars before capture
-        for (c in activeOverlays.values) {
-            c.toolbarView.visibility = View.INVISIBLE
-        }
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            try {
-                val displayMetrics = resources.displayMetrics
-                val width = displayMetrics.widthPixels
-                val height = displayMetrics.heightPixels
-                val densityDpi = displayMetrics.densityDpi
-
-                val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-                val virtualDisplay = proj.createVirtualDisplay(
-                    "ScreenCapture",
-                    width, height, densityDpi,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    imageReader.surface, null, null
-                )
-
-                imageReader.setOnImageAvailableListener({ reader ->
-                    val image = reader.acquireLatestImage()
-                    if (image != null) {
-                        try {
-                            val planes = image.planes
-                            val buffer = planes[0].buffer
-                            val pixelStride = planes[0].pixelStride
-                            val rowStride = planes[0].rowStride
-                            val rowPadding = rowStride - pixelStride * width
-
-                            val bitmap = Bitmap.createBitmap(
-                                width + rowPadding / pixelStride,
-                                height,
-                                Bitmap.Config.ARGB_8888
-                            )
-                            bitmap.copyPixelsFromBuffer(buffer)
-
-                            val croppedBitmap = if (rowPadding > 0) {
-                                Bitmap.createBitmap(bitmap, 0, 0, width, height)
-                            } else {
-                                bitmap
-                            }
-
-                            saveBitmapToGallery(croppedBitmap)
-
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            image.close()
-                            virtualDisplay?.release()
-                            imageReader.close()
-
-                            Handler(Looper.getMainLooper()).post {
-                                for (c in activeOverlays.values) {
-                                    c.toolbarView.visibility = View.VISIBLE
-                                }
-                            }
-                        }
-                    }
-                }, Handler(Looper.getMainLooper()))
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                for (c in activeOverlays.values) {
-                    c.toolbarView.visibility = View.VISIBLE
-                }
-            }
-        }, 150)
-    }
-
-    private fun saveBitmapToGallery(bitmap: Bitmap) {
-        val filename = "HandwritingOverlay_${System.currentTimeMillis()}.png"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ScreenHandwritingOverlay")
-        }
-
-        val resolver = contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        if (uri != null) {
-            resolver.openOutputStream(uri)?.use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-            Toast.makeText(this, getString(R.string.screenshot_saved), Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, getString(R.string.screenshot_failed), Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun removeOverlayForDisplay(displayId: Int) {
         val container = activeOverlays.remove(displayId) ?: return
         try {
@@ -583,8 +440,6 @@ class OverlayService : Service() {
         }
         activeOverlays.clear()
 
-        mediaProjection?.stop()
-        mediaProjection = null
         isRunning = false
 
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -594,18 +449,5 @@ class OverlayService : Service() {
     override fun onDestroy() {
         stopOverlayService()
         super.onDestroy()
-    }
-
-    private fun Intent.getIntParameterSafe(key: String, defaultValue: Int): Int {
-        return getIntExtra(key, defaultValue)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun <T : android.os.Parcelable> Intent.getParcelableExtraSafe(key: String): T? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            getParcelableExtra(key, android.os.Parcelable::class.java) as? T
-        } else {
-            getParcelableExtra(key)
-        }
     }
 }
