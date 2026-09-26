@@ -239,6 +239,11 @@ class OverlayService : Service() {
                 windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             }
 
+            val displayMetrics = targetContext.resources.displayMetrics
+            val density = displayMetrics.density
+            val screenWidth = displayMetrics.widthPixels
+            val toolbarWidthPx = (320 * density).toInt()
+
             // 1. Drawing Canvas
             val drawingParams = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -271,7 +276,6 @@ class OverlayService : Service() {
             val inflater = LayoutInflater.from(themeContext)
             val toolbar = inflater.inflate(R.layout.layout_overlay_toolbar, null)
 
-            val density = targetContext.resources.displayMetrics.density
             val toolbarParams = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -280,9 +284,9 @@ class OverlayService : Service() {
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                x = 0
-                y = (80 * density).toInt()
+                gravity = Gravity.TOP or Gravity.START
+                x = if (screenWidth > 0) maxOf(20, (screenWidth - toolbarWidthPx) / 2) else 50
+                y = (100 * density).toInt()
             }
 
             val container = DisplayOverlayContainer(
