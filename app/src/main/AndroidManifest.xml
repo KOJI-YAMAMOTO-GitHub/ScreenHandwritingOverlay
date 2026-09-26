@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -17,9 +18,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ScreenHandwritingOverlay">
 
+        <meta-data
+            android:name="android.supports_size_changes"
+            android:value="true" />
+        <meta-data
+            android:name="android.allow_multiple_resumed_activities"
+            android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode"
             android:theme="@style/Theme.ScreenHandwritingOverlay"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -29,11 +39,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ScreenCaptureActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".OverlayService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|mediaProjection">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Screen handwriting overlay for taking handwritten notes over device screen" />
