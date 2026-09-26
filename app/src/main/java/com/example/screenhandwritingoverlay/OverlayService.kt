@@ -70,7 +70,7 @@ class OverlayService : Service() {
 
     private class DisplayOverlayContainer(
         val displayId: Int,
-        val windowContext: Context,
+        val targetContext: Context,
         val windowManager: WindowManager,
         val drawingView: DrawingView,
         val toolbarView: View,
@@ -102,9 +102,7 @@ class OverlayService : Service() {
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
             val display = displayManager.getDisplay(displayId) ?: return
-            if (display.state == Display.STATE_ON || display.state == Display.STATE_UNKNOWN) {
-                setupOverlayForDisplay(display)
-            }
+            setupOverlayForDisplay(display)
         }
 
         override fun onDisplayRemoved(displayId: Int) {
@@ -112,7 +110,7 @@ class OverlayService : Service() {
         }
 
         override fun onDisplayChanged(displayId: Int) {
-            // Display metrics or orientation changed
+            // Display changed
         }
     }
 
@@ -221,9 +219,7 @@ class OverlayService : Service() {
     private fun setupOverlayWindowsAllDisplays() {
         val displays = displayManager.displays
         for (display in displays) {
-            if (display.state == Display.STATE_ON || display.state == Display.STATE_UNKNOWN) {
-                setupOverlayForDisplay(display)
-            }
+            setupOverlayForDisplay(display)
         }
     }
 
@@ -231,8 +227,17 @@ class OverlayService : Service() {
         if (activeOverlays.containsKey(display.displayId)) return
 
         try {
-            val windowContext = createWindowContext(display, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
-            val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val targetContext: Context
+            val windowManager: WindowManager
+
+            if (display.displayId == Display.DEFAULT_DISPLAY) {
+                targetContext = this
+                windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            } else {
+                val windowContext = createWindowContext(display, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
+                targetContext = windowContext
+                windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            }
 
             // 1. Drawing Canvas
             val drawingParams = WindowManager.LayoutParams(
@@ -254,7 +259,7 @@ class OverlayService : Service() {
                 gravity = Gravity.TOP or Gravity.START
             }
 
-            val canvasView = DrawingView(windowContext).apply {
+            val canvasView = DrawingView(targetContext).apply {
                 currentColor = colorList[currentColorIndex]
                 currentStrokeOption = this@OverlayService.currentStrokeOption
                 isTouchPassThrough = this@OverlayService.isPassThroughMode
@@ -262,13 +267,11 @@ class OverlayService : Service() {
             windowManager.addView(canvasView, drawingParams)
 
             // 2. Floating Toolbar
-            val themeContext = ContextThemeWrapper(windowContext, R.style.Theme_ScreenHandwritingOverlay)
+            val themeContext = ContextThemeWrapper(targetContext, R.style.Theme_ScreenHandwritingOverlay)
             val inflater = LayoutInflater.from(themeContext)
             val toolbar = inflater.inflate(R.layout.layout_overlay_toolbar, null)
 
-            val displayMetrics = windowContext.resources.displayMetrics
-            val toolbarWidthPx = (320 * displayMetrics.density).toInt()
-
+            val density = targetContext.resources.displayMetrics.density
             val toolbarParams = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -277,14 +280,14 @@ class OverlayService : Service() {
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                x = maxOf(24, (displayMetrics.widthPixels - toolbarWidthPx) / 2)
-                y = (80 * displayMetrics.density).toInt()
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                x = 0
+                y = (80 * density).toInt()
             }
 
             val container = DisplayOverlayContainer(
                 display.displayId,
-                windowContext,
+                targetContext,
                 windowManager,
                 canvasView,
                 toolbar,
