@@ -141,6 +141,7 @@ class OverlayService : Service() {
                 if (resultCode != 0 && resultData != null) {
                     mediaProjectionCode = resultCode
                     mediaProjectionData = resultData
+                    startForegroundNotification(includeMediaProjection = true)
                     captureScreen()
                 }
                 return START_STICKY
@@ -162,7 +163,7 @@ class OverlayService : Service() {
         return START_STICKY
     }
 
-    private fun startForegroundNotification() {
+    private fun startForegroundNotification(includeMediaProjection: Boolean = false) {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -198,7 +199,11 @@ class OverlayService : Service() {
         startForeground(
             NOTIFICATION_ID,
             notification,
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            if (includeMediaProjection) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            }
         )
     }
 
