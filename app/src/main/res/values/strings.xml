@@ -21,10 +21,15 @@
     <string name="desc_undo">元に戻す</string>
     <string name="desc_clear">全消去</string>
     <string name="desc_color">ペン色切り替え</string>
+    <string name="desc_eraser">消しゴム</string>
+    <string name="desc_dim">背景半透明化</string>
     <string name="desc_close">オーバーレイを閉じる</string>
 
     <string name="mode_draw">手書き</string>
     <string name="mode_pass_through">画面操作</string>
+
+    <string name="tool_pen">ペン</string>
+    <string name="tool_eraser">消しゴム</string>
 
     <string name="stroke_width_thin">細</string>
     <string name="stroke_width_medium">中</string>

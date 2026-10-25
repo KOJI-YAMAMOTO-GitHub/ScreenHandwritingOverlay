@@ -64,6 +64,28 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <!-- Eraser Toggle Button -->
+        <ImageButton
+            android:id="@+id/btn_eraser"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_eraser"
+            android:padding="8dp"
+            android:src="@drawable/ic_eraser"
+            app:tint="#FFFFFF" />
+
+        <!-- Background Semi-Translucency Dim Toggle -->
+        <ImageButton
+            android:id="@+id/btn_dim"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/desc_dim"
+            android:padding="8dp"
+            android:src="@drawable/ic_dim"
+            app:tint="#FFFFFF" />
+
         <!-- Undo -->
         <ImageButton
             android:id="@+id/btn_undo"

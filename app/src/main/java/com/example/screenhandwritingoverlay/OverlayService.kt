@@ -71,6 +71,8 @@ class OverlayService : Service() {
     private val activeOverlays = mutableMapOf<Int, DisplayOverlayContainer>()
 
     private var isPassThroughMode = false
+    private var isEraserMode = false
+    private var isBackgroundDimmed = false
     private var currentColorIndex = 0
 
     // Color cycle list: Red (赤), Blue (青), Yellow (黄), Black (黒), White (白)
@@ -243,6 +245,8 @@ class OverlayService : Service() {
                 currentColor = colorList[currentColorIndex]
                 currentStrokeOption = this@OverlayService.currentStrokeOption
                 isTouchPassThrough = this@OverlayService.isPassThroughMode
+                isEraserMode = this@OverlayService.isEraserMode
+                isBackgroundDimmed = this@OverlayService.isBackgroundDimmed
             }
             windowManager.addView(canvasView, drawingParams)
 
@@ -292,6 +296,8 @@ class OverlayService : Service() {
 
         val btnDragHandle = toolbar.findViewById<ImageView>(R.id.btn_drag_handle)
         val btnModeToggle = toolbar.findViewById<View>(R.id.btn_mode_toggle)
+        val btnEraser = toolbar.findViewById<ImageButton>(R.id.btn_eraser)
+        val btnDim = toolbar.findViewById<ImageButton>(R.id.btn_dim)
         val btnUndo = toolbar.findViewById<ImageButton>(R.id.btn_undo)
         val btnClear = toolbar.findViewById<ImageButton>(R.id.btn_clear)
         val btnWidthToggle = toolbar.findViewById<TextView>(R.id.btn_width_toggle)
@@ -335,16 +341,33 @@ class OverlayService : Service() {
         updateContainerModeUI(container)
         btnColorToggle.setColorFilter(colorList[currentColorIndex])
         btnWidthToggle.text = currentStrokeOption.label
+        updateToolIconsUI()
 
-        // Mode Toggle
+        // Mode Toggle (Screen Pass-through vs Draw)
         btnModeToggle.setOnClickListener {
             isPassThroughMode = !isPassThroughMode
             for (c in activeOverlays.values) {
-                if (isPassThroughMode) {
-                    c.drawingView.clear()
-                }
+                // Keep handwriting intact when scrolling underlying app screen!
                 updateContainerModeUI(c)
             }
+        }
+
+        // Eraser Toggle
+        btnEraser.setOnClickListener {
+            isEraserMode = !isEraserMode
+            for (c in activeOverlays.values) {
+                c.drawingView.isEraserMode = isEraserMode
+            }
+            updateToolIconsUI()
+        }
+
+        // Dim Background Toggle
+        btnDim.setOnClickListener {
+            isBackgroundDimmed = !isBackgroundDimmed
+            for (c in activeOverlays.values) {
+                c.drawingView.isBackgroundDimmed = isBackgroundDimmed
+            }
+            updateToolIconsUI()
         }
 
         // Undo
@@ -373,6 +396,14 @@ class OverlayService : Service() {
 
         // Color Toggle
         btnColorToggle.setOnClickListener {
+            // Switching color switches back to pen mode if currently in eraser mode
+            if (isEraserMode) {
+                isEraserMode = false
+                for (c in activeOverlays.values) {
+                    c.drawingView.isEraserMode = false
+                }
+                updateToolIconsUI()
+            }
             currentColorIndex = (currentColorIndex + 1) % colorList.size
             val selectedColor = colorList[currentColorIndex]
             for (c in activeOverlays.values) {
@@ -385,6 +416,25 @@ class OverlayService : Service() {
         // Close Service
         btnClose.setOnClickListener {
             stopOverlayService()
+        }
+    }
+
+    private fun updateToolIconsUI() {
+        for (c in activeOverlays.values) {
+            val btnEraser = c.toolbarView.findViewById<ImageButton>(R.id.btn_eraser)
+            val btnDim = c.toolbarView.findViewById<ImageButton>(R.id.btn_dim)
+
+            if (isEraserMode) {
+                btnEraser?.setColorFilter(Color.parseColor("#81C784")) // Active Green
+            } else {
+                btnEraser?.setColorFilter(Color.WHITE)
+            }
+
+            if (isBackgroundDimmed) {
+                btnDim?.setColorFilter(Color.parseColor("#FFD54F")) // Active Yellow
+            } else {
+                btnDim?.setColorFilter(Color.WHITE)
+            }
         }
     }
 

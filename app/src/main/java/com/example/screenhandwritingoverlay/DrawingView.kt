@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -18,7 +20,8 @@ class DrawingView @JvmOverloads constructor(
     data class Stroke(
         val path: Path,
         val color: Int,
-        val strokeWidth: Float
+        val strokeWidth: Float,
+        val isEraser: Boolean = false
     )
 
     enum class StrokeWidthOption(val dpValue: Float, val label: String) {
@@ -39,9 +42,22 @@ class DrawingView @JvmOverloads constructor(
 
     private var currentStrokeWidth: Float = StrokeWidthOption.THIN.dpValue * density
 
+    var isEraserMode: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    var isBackgroundDimmed: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    private val eraserWidth: Float = 28f * density
+
     private val strokes = mutableListOf<Stroke>()
     private var currentPath: Path? = null
-    private var currentPaint: Paint = createPaint(currentColor, currentStrokeWidth)
 
     private var lastX = 0f
     private var lastY = 0f
@@ -56,12 +72,19 @@ class DrawingView @JvmOverloads constructor(
 
     init {
         setBackgroundColor(Color.TRANSPARENT)
+        // Enable software layer for PorterDuff.Mode.CLEAR erasing
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
-    private fun createPaint(color: Int, strokeWidth: Float): Paint {
+    private fun createPaint(color: Int, strokeWidth: Float, isEraser: Boolean): Paint {
         return Paint().apply {
-            this.color = color
-            this.strokeWidth = strokeWidth
+            if (isEraser) {
+                xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+                this.strokeWidth = eraserWidth
+            } else {
+                this.color = color
+                this.strokeWidth = strokeWidth
+            }
             style = Paint.Style.STROKE
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
@@ -73,15 +96,20 @@ class DrawingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        // Draw semi-transparent background overlay if enabled
+        if (isBackgroundDimmed) {
+            canvas.drawColor(Color.parseColor("#4D000000")) // 30% black dimming layer
+        }
+
         // Draw existing completed strokes
         for (stroke in strokes) {
-            val paint = createPaint(stroke.color, stroke.strokeWidth)
+            val paint = createPaint(stroke.color, stroke.strokeWidth, stroke.isEraser)
             canvas.drawPath(stroke.path, paint)
         }
 
         // Draw current path in progress
         currentPath?.let { path ->
-            val paint = createPaint(currentColor, currentStrokeWidth)
+            val paint = createPaint(currentColor, currentStrokeWidth, isEraserMode)
             canvas.drawPath(path, paint)
         }
     }
@@ -106,13 +134,14 @@ class DrawingView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_MOVE -> {
                 currentPath?.let { path ->
-                    val dx = Math.abs(x - lastX)
-                    val dy = Math.abs(y - lastY)
-                    if (dx >= 4 || dy >= 4) {
-                        path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
-                        lastX = x
-                        lastY = y
+                    // High-rate touch sampling from historical points for maximum precision
+                    val historySize = event.historySize
+                    for (i in 0 until historySize) {
+                        val historicalX = event.getHistoricalX(i)
+                        val historicalY = event.getHistoricalY(i)
+                        addPointToPath(path, historicalX, historicalY)
                     }
+                    addPointToPath(path, x, y)
                     invalidate()
                 }
                 return true
@@ -120,7 +149,7 @@ class DrawingView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 currentPath?.let { path ->
                     path.lineTo(x, y)
-                    strokes.add(Stroke(path, currentColor, currentStrokeWidth))
+                    strokes.add(Stroke(path, currentColor, currentStrokeWidth, isEraserMode))
                     currentPath = null
                     invalidate()
                     onStrokeDrawnListener?.invoke()
@@ -130,6 +159,18 @@ class DrawingView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun addPointToPath(path: Path, x: Float, y: Float) {
+        val dx = Math.abs(x - lastX)
+        val dy = Math.abs(y - lastY)
+        if (dx >= 2f || dy >= 2f) {
+            val midX = (x + lastX) / 2f
+            val midY = (y + lastY) / 2f
+            path.quadTo(lastX, lastY, midX, midY)
+            lastX = x
+            lastY = y
+        }
     }
 
     override fun performClick(): Boolean {
