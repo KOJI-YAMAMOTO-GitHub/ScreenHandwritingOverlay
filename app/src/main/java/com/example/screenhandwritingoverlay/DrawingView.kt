@@ -5,8 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -20,8 +18,7 @@ class DrawingView @JvmOverloads constructor(
     data class Stroke(
         val path: Path,
         val color: Int,
-        val strokeWidth: Float,
-        val isEraser: Boolean = false
+        val strokeWidth: Float
     )
 
     enum class StrokeWidthOption(val dpValue: Float, val label: String) {
@@ -54,7 +51,7 @@ class DrawingView @JvmOverloads constructor(
             invalidate()
         }
 
-    private val eraserWidth: Float = 28f * density
+    private val eraserRadius: Float = 20f * density
 
     private val strokes = mutableListOf<Stroke>()
     private var currentPath: Path? = null
@@ -72,19 +69,12 @@ class DrawingView @JvmOverloads constructor(
 
     init {
         setBackgroundColor(Color.TRANSPARENT)
-        // Enable software layer for PorterDuff.Mode.CLEAR erasing
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
-    private fun createPaint(color: Int, strokeWidth: Float, isEraser: Boolean): Paint {
+    private fun createPaint(color: Int, strokeWidth: Float): Paint {
         return Paint().apply {
-            if (isEraser) {
-                xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
-                this.strokeWidth = eraserWidth
-            } else {
-                this.color = color
-                this.strokeWidth = strokeWidth
-            }
+            this.color = color
+            this.strokeWidth = strokeWidth
             style = Paint.Style.STROKE
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
@@ -96,21 +86,23 @@ class DrawingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Draw semi-transparent background overlay if enabled
+        // Draw semi-transparent background overlay if enabled (White 60% opacity = 153/255)
         if (isBackgroundDimmed) {
-            canvas.drawColor(Color.parseColor("#4D000000")) // 30% black dimming layer
+            canvas.drawColor(Color.argb(153, 255, 255, 255))
         }
 
         // Draw existing completed strokes
         for (stroke in strokes) {
-            val paint = createPaint(stroke.color, stroke.strokeWidth, stroke.isEraser)
+            val paint = createPaint(stroke.color, stroke.strokeWidth)
             canvas.drawPath(stroke.path, paint)
         }
 
-        // Draw current path in progress
-        currentPath?.let { path ->
-            val paint = createPaint(currentColor, currentStrokeWidth, isEraserMode)
-            canvas.drawPath(path, paint)
+        // Draw current path in progress (only in Pen mode)
+        if (!isEraserMode) {
+            currentPath?.let { path ->
+                val paint = createPaint(currentColor, currentStrokeWidth)
+                canvas.drawPath(path, paint)
+            }
         }
     }
 
@@ -122,6 +114,30 @@ class DrawingView @JvmOverloads constructor(
         val x = event.x
         val y = event.y
 
+        if (isEraserMode) {
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    eraseStrokesAt(x, y)
+                    return true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val historySize = event.historySize
+                    for (i in 0 until historySize) {
+                        eraseStrokesAt(event.getHistoricalX(i), event.getHistoricalY(i))
+                    }
+                    eraseStrokesAt(x, y)
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    eraseStrokesAt(x, y)
+                    performClick()
+                    return true
+                }
+            }
+            return true
+        }
+
+        // Pen Mode
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val path = Path()
@@ -149,7 +165,7 @@ class DrawingView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 currentPath?.let { path ->
                     path.lineTo(x, y)
-                    strokes.add(Stroke(path, currentColor, currentStrokeWidth, isEraserMode))
+                    strokes.add(Stroke(path, currentColor, currentStrokeWidth))
                     currentPath = null
                     invalidate()
                     onStrokeDrawnListener?.invoke()
@@ -159,6 +175,33 @@ class DrawingView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun eraseStrokesAt(x: Float, y: Float) {
+        val eraserCircle = Path().apply {
+            addCircle(x, y, eraserRadius, Path.Direction.CW)
+        }
+
+        val iterator = strokes.iterator()
+        var modified = false
+
+        while (iterator.hasNext()) {
+            val stroke = iterator.next()
+            val strokePaint = createPaint(stroke.color, stroke.strokeWidth)
+            val fillPath = Path()
+            strokePaint.getFillPath(stroke.path, fillPath)
+
+            val intersectPath = Path()
+            if (intersectPath.op(fillPath, eraserCircle, Path.Op.INTERSECT) && !intersectPath.isEmpty) {
+                iterator.remove()
+                modified = true
+            }
+        }
+
+        if (modified) {
+            invalidate()
+            onStrokeDrawnListener?.invoke()
+        }
     }
 
     private fun addPointToPath(path: Path, x: Float, y: Float) {
